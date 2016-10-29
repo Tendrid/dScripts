@@ -1847,7 +1847,7 @@ towns_update_dynmap_chunk:
   definitions: chunk
   script:
       - if <def[chunk]||null> == null queue clear
-      - if <proc[towns_get_setting].context[towns.use_dynmap]> queue clear
+      - if <proc[towns_get_setting].context[towns.use_dynmap].not> queue clear
       - define chunkname <proc[towns_format_chunk_to_save].context[<def[chunk]>]>
       - execute as_server "dmarker deletearea id:<def[chunkname]>"
       - define town <proc[towns_get_town_from_chunk].context[<def[chunk]>]>
