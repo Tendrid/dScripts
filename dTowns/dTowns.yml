@@ -43,6 +43,22 @@ towns_file_handler:
     on system time minutely:
     - if <context.minute.mod[10]> != 0 queue clear
     - run towns_save
+towns_set_default_const:
+  type: task
+  debug: false
+  speed: 0
+  script:
+  - flag server CONST.towns.use_economy:true
+  - flag server CONST.towns.creation.creation_cost:500
+  - flag server CONST.towns.claiming.claiming_cost:100
+  - flag server CONST.towns.claiming.outpost_claiming_cost:1000
+  - flag server CONST.towns.claiming.chunks_per_player:8
+  - flag server CONST.towns.claiming.outposts_per_player:1
+  - flag server CONST.towns.use_dynmap:false
+  - flag server CONST.towns.allow_dynmap_shenanigans:false
+  - flag server CONST.towns.language:english
+  - flag server CONST.towns.wilderness_name:Wilderness
+  - flag server CONST.towns.wilderness_welcome:Welcome to the world
 towns_reload_config:
   type: task
   debug: false
@@ -52,15 +68,17 @@ towns_reload_config:
     - yaml load:/towns/config/config.yml id:towns_config
     } else {
     - yaml create id:towns_config
-    - yaml id:towns_config set towns.use_economy:true
-    - yaml id:towns_config set towns.creation.creation_cost:500
-    - yaml id:towns_config set towns.claiming.claiming_cost:100
-    - yaml id:towns_config set towns.claiming.outpost_claiming_cost:1000
-    - yaml id:towns_config set towns.claiming.chunks_per_player:8
-    - yaml id:towns_config set towns.claiming.outposts_per_player:1
-    - yaml id:towns_config set towns.use_dynmap:false
-    - yaml id:towns_config set towns.allow_dynmap_shenanigans:false
-    - yaml id:towns_config set towns.language:english
+    - yaml id:towns_config set towns.use_economy:<proc[towns_get_setting].context[towns.use_economy]>
+    - yaml id:towns_config set towns.creation.creation_cost:<proc[towns_get_setting].context[towns.creation.creation_cost]>
+    - yaml id:towns_config set towns.claiming.claiming_cost:<proc[towns_get_setting].context[towns.claiming.claiming_cost]>
+    - yaml id:towns_config set towns.claiming.outpost_claiming_cost:<proc[towns_get_setting].context[towns.claiming.outpost_claiming_cost]>
+    - yaml id:towns_config set towns.claiming.chunks_per_player:<proc[towns_get_setting].context[towns.claiming.chunks_per_player]>
+    - yaml id:towns_config set towns.claiming.outposts_per_player:<proc[towns_get_setting].context[towns.claiming.outposts_per_player]>
+    - yaml id:towns_config set towns.use_dynmap:<proc[towns_get_setting].context[towns.use_dynmap]>
+    - yaml id:towns_config set towns.allow_dynmap_shenanigans:<proc[towns_get_setting].context[towns.allow_dynmap_shenanigans]>
+    - yaml id:towns_config set towns.language:<proc[towns_get_setting].context[towns.language]>
+    - yaml id:towns_config set towns.wilderness_name:<proc[towns_get_setting].context[towns.wilderness_name]>
+    - yaml id:towns_config set towns.wilderness_welcome:<proc[towns_get_setting].context[towns.wilderness_welcome]>
     - yaml savefile:/towns/config/config.yml id:towns_config
     }
 towns_load_lookup_table:
@@ -128,6 +146,12 @@ towns_fix_cuboids:
       - define chunk <proc[towns_format_chunk_to_normal].context[<def[value]>]>
       - define chunkname <def[chunk]>
       - note <def[chunk].cuboid> as:towns/<def[town]>/<def[chunkname]>
+towns_get_setting:
+  type: procedure
+  debug: false
+  definitions: key
+  script:
+  - determine <yaml[towns_config].read[<def[key]>]||<server.flag[CONST.<def[key]>]>>
 ########################
 #
 # command handler
@@ -209,8 +233,10 @@ towns_command_handler:
     - narrate "%c% accept <&0>-<&7> <parse:<proc[towns_get_translation].context[command-accept-info]>>" format:towns_format1
     - narrate "%c% leave <&0>-<&7> <parse:<proc[towns_get_translation].context[command-leave-info]>>" format:towns_format1
     - narrate "%c% kick (player) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-kick-info]>>" format:towns_format1
-    - narrate "%c% deposit (<&ns>) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-deposit-info]>>" format:towns_format1
-    - narrate "%c% withdraw (<&ns>) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-withdraw-info]>>" format:towns_format1
+    - if <proc[towns_get_setting].context[towns.use_economy]> {
+      - narrate "%c% deposit (<&ns>) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-deposit-info]>>" format:towns_format1
+      - narrate "%c% withdraw (<&ns>) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-withdraw-info]>>" format:towns_format1
+      }
     - narrate "%c% toggle (pistons/pvp/titlescreen) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-toggle-info]>>" format:towns_format1
     - narrate "%c% rank (player) (rank) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-rank-info]>>" format:towns_format1
     - narrate "%c% claim <&0>-<&7> <parse:<proc[towns_get_translation].context[command-claim-info]>>" format:towns_format1
@@ -234,8 +260,8 @@ towns_command_handler:
       - narrate "<&c><parse:<proc[towns_get_translation].context[no-name-specified]>>" format:towns_format1
       - queue clear
       }
-    - if <yaml[towns_config].read[towns.use_economy]||true> {
-      - define cost <yaml[towns_config].read[towns.creation.creation_cost]||100>
+    - if <proc[towns_get_setting].context[towns.use_economy]> {
+      - define cost <proc[towns_get_setting].context[towns.creation.creation_cost]>
       - if <player.money> < <def[cost]> {
         - narrate "<&c><parse:<proc[towns_get_translation].context[not-enough-money-to-create]>>" format:towns_format1
         - queue clear
@@ -354,9 +380,9 @@ towns_command_handler:
       - narrate "<&c><parse:<proc[towns_get_translation].context[insufficient-rank]>>" format:towns_format1
       - queue clear
       }
-    - if <yaml[towns_config].read[towns.use_economy]||true> {
-      - if <proc[towns_get_bank_money].context[<def[town]>]> < <yaml[towns_config].read[towns.claiming.claiming_cost]||100> {
-        - define required <yaml[towns_config].read[towns.claiming.claiming_cost]||100>
+    - if <proc[towns_get_setting].context[towns.use_economy]> {
+      - if <proc[towns_get_bank_money].context[<def[town]>]> < <proc[towns_get_setting].context[towns.claiming.claiming_cost]> {
+        - define required <proc[towns_get_setting].context[towns.claiming.claiming_cost]>
         - narrate "<&c><parse:<proc[towns_get_translation].context[not-enough-money]>>" format:towns_format1
         - queue clear
         }
@@ -381,8 +407,8 @@ towns_command_handler:
       - narrate "<&c><parse:<proc[towns_get_translation].context[chunk-already-claimed-by-other]>>" format:towns_format1
       - queue clear
       }
-    - if <yaml[towns_config].read[towns.use_economy]||true> {
-      - yaml id:towns_town_<def[town]> set town.bank.money:-:<yaml[towns_config].read[towns.claiming.claiming_cost]||100>
+    - if <proc[towns_get_setting].context[towns.use_economy]> {
+      - yaml id:towns_town_<def[town]> set town.bank.money:-:<proc[towns_get_setting].context[towns.claiming.claiming_cost]>
       }
     - run towns_claim_chunk def:<def[town]>|<def[chunk]>|normal|<player>
   outpost:
@@ -395,9 +421,9 @@ towns_command_handler:
       - narrate "<&c><parse:<proc[towns_get_translation].context[insufficient-rank]>>" format:towns_format1
       - queue clear
       }
-    - if <yaml[towns_config].read[towns.use_economy]||true> {
-      - if <proc[towns_get_bank_money].context[<def[town]>]> < <yaml[towns_config].read[towns.claiming.outpost_claiming_cost]||1000> {
-        - define required <yaml[towns_config].read[towns.claiming.outpost_claiming_cost]||1000>
+    - if <proc[towns_get_setting].context[towns.use_economy]> {
+      - if <proc[towns_get_bank_money].context[<def[town]>]> < <proc[towns_get_setting].context[towns.claiming.outpost_claiming_cost]> {
+        - define required <proc[towns_get_setting].context[towns.claiming.outpost_claiming_cost]>
         - narrate "<&c><parse:<proc[towns_get_translation].context[not-enough-money]>>" format:towns_format1
         - queue clear
         }
@@ -426,8 +452,8 @@ towns_command_handler:
       - narrate "<&c><parse:<proc[towns_get_translation].context[chunk-already-claimed-by-other]>>" format:towns_format1
       - queue clear
       }
-    - if <yaml[towns_config].read[towns.use_economy]||true> {
-      - yaml id:towns_town_<def[town]> set town.bank.money:-:<yaml[towns_config].read[towns.claiming.outpost_claiming_cost]||1000>
+    - if <proc[towns_get_setting].context[towns.use_economy]> {
+      - yaml id:towns_town_<def[town]> set town.bank.money:-:<proc[towns_get_setting].context[towns.claiming.outpost_claiming_cost]>
       }
     - run towns_claim_chunk def:<def[town]>|<def[chunk]>|outpost|<player>
   unclaim:
@@ -458,7 +484,7 @@ towns_command_handler:
     - run towns_unclaim_chunk def:<def[town]>|<def[chunk]>|<player>
   deposit:
     - define town <proc[towns_get_town]>
-    - if !<yaml[towns_config].read[towns.use_economy]||true> {
+    - if !<proc[towns_get_setting].context[towns.use_economy]> {
       - narrate "<&c><parse:<proc[towns_get_translation].context[no-economy]>>"
       - queue clear
       }
@@ -479,7 +505,7 @@ towns_command_handler:
     - run towns_give_money def:<def[town]>|<def[amount]>|<player>
   withdraw:
     - define town <proc[towns_get_town]>
-    - if !<yaml[towns_config].read[towns.use_economy]||true> {
+    - if !<proc[towns_get_setting].context[towns.use_economy]> {
       - narrate "<&c><parse:<proc[towns_get_translation].context[no-economy]>>"
       - queue clear
       }
@@ -1093,19 +1119,14 @@ towns_welcome_messages:
   handle_titles:
     - define to <proc[towns_get_town_from_chunk].context[<context.to.chunk>]>
     - define from <proc[towns_get_town_from_chunk].context[<context.from.chunk>]>
-    - if <def[from]> == null && <def[to]> != null {
+    - if <def[from]> != <def[to]> {
       - if <proc[towns_get_rule].context[<def[to]>|titlescreen]> {
-        - title "title:<&6>Entering town<&co>" "subtitle:<&e><proc[towns_get_name].context[<def[to]>]>"
+        - title "title:<&6><proc[towns_get_name].context[<def[to]>]>" "subtitle:<&e><proc[towns_get_welcome].context[<def[to]>]>"
         } else {
-        - narrate "<&6>Entering town<&co> <&e><proc[towns_get_name].context[<def[to]>]>" format:towns_format1
-        }
-      } else if <def[from]> != null && <def[to]> == null {
-      - if <proc[towns_get_rule].context[<def[from]>|titlescreen]> {
-        - title "title:<&6>Leaving town<&co>" "subtitle:<&e><proc[towns_get_name].context[<def[from]>]>"
-        } else {
-        - narrate "<&6>Leaving town<&co> <&e><proc[towns_get_name].context[<def[from]>]>" format:towns_format1
+        - narrate "<&6><proc[towns_get_name].context[<def[to]>]><&co> <&e><proc[towns_get_welcome].context[<def[to]>]>" format:towns_format1
         }
       }
+
   handle_outline:
   - if <player.has_flag[towns.outline.cooldown]> queue clear
   - flag <player> "towns.outline.cooldown:true" "duration:2s"
@@ -1126,7 +1147,7 @@ towns_get_translation:
   - if <def[key]> == null {
     - determine "invalid translation key specified"
     }
-  - define language <yaml[towns_config].read[towns.language]||english>
+  - define language <proc[towns_get_setting].context[towns.language]>
   - if <s@towns_translations.list_keys[translations].contains[<def[language]>].not> {
     - determine "Invalid language specified"
     }
@@ -1426,6 +1447,14 @@ towns_get_name:
   - if <def[town]||null> == null determine null
   - inject s@towns_checkload_town
   - determine <yaml[towns_town_<def[town]>].read[town.name].unescaped||li@>
+towns_get_welcome:
+  type: procedure
+  debug: false
+  definitions: town
+  script:
+  - if <def[town]||null> == null determine <proc[towns_get_setting].context[towns.wilderness_welcome].unescaped>
+  - inject s@towns_checkload_town
+  - determine <yaml[towns_town_<def[town]>].read[town.welcome].unescaped||li@>
 towns_get_rank:
   type: procedure
   debug: false
@@ -1519,14 +1548,14 @@ towns_get_max_chunks:
   definitions: town
   script:
   - if <def[town]||null> == null determine null
-  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<yaml[towns_config].read[towns.claiming.chunks_per_player]||8>].add[<yaml[towns_town_<def[town]>].read[town.bonus_chunks].as_int||0>].as_int||0>
+  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<proc[towns_get_setting].context[towns.claiming.chunks_per_player]>].add[<proc[towns_get_setting].context[town.bonus_chunks]>].as_int||0>
 towns_get_max_outposts:
   type: procedure
   debug: false
   definitions: town
   script:
   - if <def[town]||null> == null determine null
-  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<yaml[towns_config].read[towns.claiming.outposts_per_player]||1>].add[<yaml[towns_town_<def[town]>].read[town.bonus_outposts].as_int||0>].as_int||0>
+  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<proc[towns_get_setting].context[towns.claiming.outposts_per_player]>].add[<proc[towns_get_setting].context[towns.bonus_outposts].as_int>].as_int||0>
 towns_format_chunk_to_save:
   type: procedure
   debug: false
@@ -1732,7 +1761,7 @@ towns_update_dynmap_chunk:
   definitions: chunk
   script:
       - if <def[chunk]||null> == null queue clear
-      - if <yaml[towns_config].read[towns.use_dynmap].not||true> queue clear
+      - if <proc[towns_get_setting].context[towns.use_dynmap]> queue clear
       - define chunkname <proc[towns_format_chunk_to_save].context[<def[chunk]>]>
       - execute as_server "dmarker deletearea id:<def[chunkname]>"
       - define town <proc[towns_get_town_from_chunk].context[<def[chunk]>]>
@@ -1760,7 +1789,7 @@ towns_update_dynmap_spawnpoint:
   definitions: town
   script:
   - if <def[town]||null> == null queue clear
-  - if <yaml[towns_config].read[towns.use_dynmap].not||true> queue clear
+  - if <proc[towns_get_setting].context[towns.use_dynmap].not> queue clear
   - define spawnpoint <proc[towns_get_spawnpoint].context[<def[town]>]>
   - if <def[spawnpoint]> == null queue clear
   - execute as_server "dmarker delete id:<def[town]>/spawnpoint"
@@ -1772,7 +1801,7 @@ towns_update_dynmap_town:
   definitions: town
   script:
     - if <def[town]||null> == null queue clear
-    - if <yaml[towns_config].read[towns.use_dynmap].not||true> queue clear
+    - if <proc[towns_get_setting].context[towns.use_dynmap].not> queue clear
     - run towns_update_dynmap_spawnpoint def:<def[town]>
     - foreach <proc[towns_get_chunks].context[<def[town]>].parse[replace[/].with[,].as_chunk]>:
       - ~run towns_update_dynmap_chunk def:<def[value]>
@@ -1781,7 +1810,7 @@ towns_update_dynmap_all_towns:
   debug: false
   speed: 0
   script:
-    - if <yaml[towns_config].read[towns.use_dynmap].not||true> queue clear
+    - if <proc[towns_get_setting].context[towns.use_dynmap].not> queue clear
     - foreach <yaml[towns_lookup_table].list_keys[towns]||li@>:
       - run towns_update_dynmap_town def:<def[value]>
 towns_dynmap_clear_areas:
@@ -1789,7 +1818,7 @@ towns_dynmap_clear_areas:
   debug: false
   speed: 0
   script:
-    - if <yaml[towns_config].read[towns.use_dynmap].not||true> queue clear
+    - if <proc[towns_get_setting].context[towns.use_dynmap].not> queue clear
     - execute as_server "dmarker listareas" save:areas
     - foreach <entry[areas].output>:
       - execute as_server "dmarker deletearea id:<def[value].before[<&co>]>"
@@ -1801,13 +1830,13 @@ towns_dynmap_shutdown_handler:
   debug: false
   events:
     on shutdown:
-    - if <yaml[towns_config].read[towns.allow_dynmap_shenanigans].not||true> queue clear
+    - if <proc[towns_get_setting].context[towns.allow_dynmap_shenanigans].not> queue clear
     - if <server.has_file[../dynmap/markers.yml]> {
       - adjust server delete_file:../dynmap/markers.yml
       }
     - inject s@towns_dynmap_clear_areas
     on server prestart:
-    - if <yaml[towns_config].read[towns.allow_dynmap_shenanigans].not||true> queue clear
+    - if <proc[towns_get_setting].context[towns.allow_dynmap_shenanigans].not> queue clear
     - if <server.has_file[../dynmap/markers.yml]> {
       - adjust server delete_file:../dynmap/markers.yml
       }
