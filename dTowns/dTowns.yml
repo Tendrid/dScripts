@@ -1654,7 +1654,7 @@ towns_get_rule:
     - determine <proc[towns_get_wilderness_rule].context[<def[rule]>]>
     }
   - inject s@towns_checkload_town
-  - determine <yaml[towns_town_<def[town]>].read[town.rule.<def[rule]>]||true>
+  - determine <yaml[towns_town_<def[town]>].read[town.rule.<def[rule]>]||<proc[towns_get_setting].context[town.rule.<def[rule]>]>>
 towns_get_wilderness_rule:
   type: procedure
   debug: false
