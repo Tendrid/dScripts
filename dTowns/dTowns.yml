@@ -39,6 +39,7 @@ towns_defaults:
       pistons: true
       pvp: true
       titlescreen: true
+      firespread: true
   wilderness:
     name: Wilderness
     welcome: It&sqs dangerous to go alone
@@ -46,6 +47,7 @@ towns_defaults:
       pistons: true
       pvp: true
       titlescreen: true
+      firespread: true
 ########################
 #
 # File handler
@@ -580,7 +582,7 @@ towns_command_handler:
       - queue clear
       }
     - define rule <context.args.get[2]||null>
-    - define rules li@Pistons|PVP|Titlescreen
+    - define rules li@Pistons|PVP|Titlescreen|Firespread
     - if <def[rules]> !contains <def[rule]> {
       - define rulelist <def[rules].formatted>
       - narrate "<&c><parse:<proc[towns_get_translation].context[invalid-rule]>>" format:towns_format1
@@ -1142,6 +1144,9 @@ towns_event_handler:
     - inject locally path:check_blockchange
     on player empties bucket in notable cuboid:
     - inject locally path:check_blockchange
+    on player dyes sheep:
+    - define location <context.entity.location>
+    - inject locally path:check_blockchange
     on player damages entity in notable cuboid:
     - if <context.entity.entity_type> == player queue clear
     - define location <context.entity.location>
@@ -1156,6 +1161,14 @@ towns_event_handler:
     - foreach <def[newblocks]>:
       - define location <def[value]>
       - inject locally path:check_blockchange
+    on block burns:
+    - define alert_player false
+    - define checkfor firespread
+    - inject locally path:check_blockchange
+    on fire spreads:
+    - define alert_player false
+    - define checkfor firespread
+    - inject locally path:check_blockchange
   check_blockchange:
   - if <def[location].exists.not> define location <context.location>
   - if <player.has_permission[towns.override.build]||false> goto finish
@@ -1167,8 +1180,10 @@ towns_event_handler:
   - if <def[checkfor].exists> {
     - if <proc[towns_get_rule].context[<def[town]>|<def[checkfor]>]||false> goto finish
     }
-  - narrate "<&c>You are not allowed to do this in the town of <proc[towns_get_name].context[<def[town]>]>" format:towns_format1
-  - playeffect <player.location.add[<player.eye_location.direction.vector.mul[2]>]> effect:barrier qty:5 offset:0.5 visibility:50 targets:<player>
+  - if <def[alert_player]||true> {
+    - narrate "<&c>You are not allowed to do this in the town of <proc[towns_get_name].context[<def[town]>]>" format:towns_format1
+    - playeffect <player.location.add[<player.eye_location.direction.vector.mul[2]>]> effect:barrier qty:5 offset:0.5 visibility:50 targets:<player>
+    }
   - determine cancelled
   - mark finish
 towns_welcome_messages:
