@@ -40,6 +40,7 @@ towns_defaults:
       pvp: true
       titlescreen: true
       firespread: true
+      mobspawn: true
   wilderness:
     name: Wilderness
     welcome: It&sqs dangerous to go alone
@@ -48,6 +49,7 @@ towns_defaults:
       pvp: true
       titlescreen: true
       firespread: true
+      mobspawn: true
 ########################
 #
 # File handler
@@ -100,6 +102,8 @@ towns_reload_config:
     - yaml id:towns_config set wilderness.rule.pvp:<proc[towns_get_setting].context[wilderness.rule.pvp]>
     - yaml id:towns_config set wilderness.rule.pistons:<proc[towns_get_setting].context[wilderness.rule.pistons]>
     - yaml id:towns_config set wilderness.rule.titlescreen:<proc[towns_get_setting].context[wilderness.rule.titlescreen]>
+    - yaml id:towns_config set wilderness.rule.firespread:<proc[towns_get_setting].context[wilderness.rule.firespread]>
+    - yaml id:towns_config set wilderness.rule.mobspawn:<proc[towns_get_setting].context[wilderness.rule.mobspawn]>
 
     - yaml savefile:/towns/config/config.yml id:towns_config
     }
@@ -582,7 +586,7 @@ towns_command_handler:
       - queue clear
       }
     - define rule <context.args.get[2]||null>
-    - define rules li@Pistons|PVP|Titlescreen|Firespread
+    - define rules li@Pistons|PVP|Titlescreen|Firespread|MobSpawn
     - if <def[rules]> !contains <def[rule]> {
       - define rulelist <def[rules].formatted>
       - narrate "<&c><parse:<proc[towns_get_translation].context[invalid-rule]>>" format:towns_format1
@@ -1161,6 +1165,13 @@ towns_event_handler:
     - foreach <def[newblocks]>:
       - define location <def[value]>
       - inject locally path:check_blockchange
+    on entity spawns in notable cuboid:
+      - define allowed_spawn_reasons <li@CURED|BREEDING|SPAWNER_EGG>
+      - if <def[allowed_spawn_reasons].find[<context.reason>]> == -1 {
+        - define alert_player false
+        - define checkfor mobspawn
+        - inject locally path:check_blockchange
+        }
     on block burns:
     - define alert_player false
     - define checkfor firespread
