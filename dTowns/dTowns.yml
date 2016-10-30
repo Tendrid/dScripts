@@ -913,6 +913,7 @@ towns_give_money:
   speed: 0
   definitions: town|amount|player
   script:
+    - if <proc[towns_get_setting].context[towns.use_economy].not> queue clear
     - if <def[town]||null> == null queue clear
     - if <def[amount].as_int||null> == null queue clear
     - yaml id:towns_town_<def[town]> set town.bank.money:+:<def[amount]>
@@ -1184,8 +1185,12 @@ towns_event_handler:
   - if <def[location].exists.not> define location <context.location>
   - if <player.has_permission[towns.override.build]||false> goto finish
   - define town <proc[towns_get_town_from_chunk].context[<def[location].chunk>]>
-  - if <def[town]> == null goto finish
-  - if <proc[towns_get_town].context[<player||null>]||null> == <def[town]> && <def[checkfor]||null> != pvp {
+  - if <def[town]> == null {
+    - define player_town Wilderness
+    } else {
+    - define player_town <def[town]>
+    }
+  - if <proc[towns_get_town].context[<player||null>]||null> == <def[player_town]> && <def[checkfor]||null> != pvp {
     - goto finish
     }
   - if <def[checkfor].exists> {
@@ -1589,6 +1594,7 @@ towns_get_bank_money:
   debug: false
   definitions: town
   script:
+  - if <proc[towns_get_setting].context[towns.use_economy].not> determine null
   - if <def[town]||null> == null determine null
   - determine <yaml[towns_town_<def[town]>].read[town.bank.money]||0>
 towns_get_chunks:
