@@ -1144,9 +1144,9 @@ towns_event_handler:
     - inject locally path:check_blockchange
     on player empties bucket in notable cuboid:
     - inject locally path:check_blockchange
-    on player dyes sheep:
-    - define location <context.entity.location>
-    - inject locally path:check_blockchange
+    #on player dyes sheep:
+    #- define location <context.entity.location>
+    #- inject locally path:check_blockchange
     on player damages entity in notable cuboid:
     - if <context.entity.entity_type> == player queue clear
     - define location <context.entity.location>
