@@ -1167,7 +1167,7 @@ towns_event_handler:
       - define location <def[value]>
       - inject locally path:check_blockchange
     on entity spawns in notable cuboid:
-      - define allowed_spawn_reasons <li@CURED|BREEDING|SPAWNER_EGG>
+      - define allowed_spawn_reasons <li@CURED|BREEDING|SPAWNER_EGG|BUILD_SNOWMAN|BUILD_IRONGOLEM|CUSTOM|DISPENSE_EGG|EGG|ENDER_PEARL|SLIME_SPLIT>
       - if <def[allowed_spawn_reasons].find[<context.reason>]> == -1 {
         - define alert_player false
         - define checkfor mobspawn
