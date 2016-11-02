@@ -39,8 +39,8 @@ towns_defaults:
       pistons: true
       pvp: true
       titlescreen: true
-      firespread: true
-      mobspawn: true
+      firespread: false
+      mobspawn: false
   wilderness:
     name: Wilderness
     welcome: It&sqs dangerous to go alone
