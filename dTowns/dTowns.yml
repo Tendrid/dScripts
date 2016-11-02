@@ -1653,14 +1653,14 @@ towns_get_max_chunks:
   definitions: town
   script:
   - if <def[town]||null> == null determine null
-  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<proc[towns_get_setting].context[towns.claiming.chunks_per_player]>].add[<proc[towns_get_setting].context[town.bonus_chunks]>].as_int||0>
+  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<proc[towns_get_setting].context[towns.claiming.chunks_per_player]>].add[<yaml[towns_town_<def[town]>].read[town.bonus_chunks].as_int||0>].as_int||0>
 towns_get_max_outposts:
   type: procedure
   debug: false
   definitions: town
   script:
   - if <def[town]||null> == null determine null
-  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<proc[towns_get_setting].context[towns.claiming.outposts_per_player]>].add[<proc[towns_get_setting].context[towns.bonus_outposts].as_int>].as_int||0>
+  - determine <proc[towns_get_members].context[<def[town]>].size.mul[<proc[towns_get_setting].context[towns.claiming.outposts_per_player]>].add[<yaml[towns_town_<def[town]>].read[towns.bonus_outposts].as_int||0>].as_int||0>
 towns_format_chunk_to_save:
   type: procedure
   debug: false
