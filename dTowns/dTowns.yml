@@ -1173,6 +1173,10 @@ towns_event_handler:
         - define checkfor mobspawn
         - inject locally path:check_blockchange
         }
+    on liquid spreads in notable cuboid:
+    - if <context.destination.cuboids.is_empty.not> && <context.location.cuboids.is_empty> {
+      - determine cancelled
+      }
     on block burns:
     - define alert_player false
     - define checkfor firespread
