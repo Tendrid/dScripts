@@ -276,7 +276,7 @@ towns_command_handler:
     - narrate "%c% map <&0>-<&7> <parse:<proc[towns_get_translation].context[command-map-info]>>" format:towns_format1
     - narrate "%c% outline <&0>-<&7> <parse:<proc[towns_get_translation].context[command-outline-info]>>" format:towns_format1
   create:
-    - if <proc[towns_get_town]> != null {
+    - if <proc[towns_get_town]> != null && <player.is_op.not> {
       - narrate "<&c><parse:<proc[towns_get_translation].context[already-in-town]>>" format:towns_format1
       - queue clear
       }
@@ -1127,7 +1127,7 @@ towns_update_town_info:
     - if <def[town]||null> == null queue clear
     - yaml id:towns_lookup_table set towns.<def[town]>.membersize:<proc[towns_get_members].context[<def[town]>].size||0>
     - yaml id:towns_lookup_table set towns.<def[town]>.name:<proc[towns_get_name].context[<def[town]>]>
-    - yaml id:towns_lookup_table set towns.<def[town]>.owner:<proc[towns_get_members_by_rank].context[<def[town]>|owner].get[1]>
+    - yaml id:towns_lookup_table set towns.<def[town]>.owner:<proc[towns_get_members_by_rank].context[<def[town]>|owner].first||Unknown>
     - if <def[2]||null> != all queue clear
     - foreach <proc[towns_get_chunks].context[<def[town]>].parse[replace[/].with[,].as_chunk]||li@>:
       - define chunk <def[value]>
@@ -1145,13 +1145,16 @@ towns_event_handler:
     - inject locally path:check_blockchange
     on player places block in notable cuboid:
     - inject locally path:check_blockchange
-    on player right clicks block in notable cuboid:
-    - inject locally path:check_blockchange
+    on player opens inventory:
+    - if <player.location.cursor_on.cuboids.is_empty.not> {
+      - define location <player.location.cursor_on>
+      - inject locally path:check_blockchange
+      }
     on player empties bucket in notable cuboid:
     - inject locally path:check_blockchange
-    #on player dyes sheep:
-    #- define location <context.entity.location>
-    #- inject locally path:check_blockchange
+    on player right clicks entity in notable cuboid:
+    - define location <context.entity.location>
+    - inject locally path:check_blockchange
     on player damages entity in notable cuboid:
     - if <context.entity.entity_type> == player queue clear
     - define location <context.entity.location>
@@ -1167,12 +1170,12 @@ towns_event_handler:
       - define location <def[value]>
       - inject locally path:check_blockchange
     on entity spawns in notable cuboid:
-      - define allowed_spawn_reasons <li@CURED|BREEDING|SPAWNER_EGG|BUILD_SNOWMAN|BUILD_IRONGOLEM|CUSTOM|DISPENSE_EGG|EGG|ENDER_PEARL|SLIME_SPLIT>
-      - if <def[allowed_spawn_reasons].find[<context.reason>]> == -1 {
-        - define alert_player false
-        - define checkfor mobspawn
-        - inject locally path:check_blockchange
-        }
+    - define allowed_spawn_reasons <li@CURED|BREEDING|SPAWNER_EGG|BUILD_SNOWMAN|BUILD_IRONGOLEM|CUSTOM|DISPENSE_EGG|EGG|ENDER_PEARL|SLIME_SPLIT>
+    - if <def[allowed_spawn_reasons].find[<context.reason>]> == -1 {
+      - define alert_player false
+      - define checkfor mobspawn
+      - inject locally path:check_blockchange
+      }
     on liquid spreads in notable cuboid:
     - if <context.destination.cuboids.is_empty.not> && <context.location.cuboids.is_empty> {
       - determine cancelled
@@ -1202,7 +1205,7 @@ towns_event_handler:
     }
   - if <def[alert_player]||true> {
     - narrate "<&c>You are not allowed to do this in the town of <proc[towns_get_name].context[<def[town]>]>" format:towns_format1
-    - playeffect <player.location.add[<player.eye_location.direction.vector.mul[2]>]> effect:barrier qty:5 offset:0.5 visibility:50 targets:<player>
+    #- playeffect <player.location.add[<player.eye_location.direction.vector.mul[2]>]> effect:barrier qty:5 offset:0.5 visibility:50 targets:<player>
     }
   - determine cancelled
   - mark finish
