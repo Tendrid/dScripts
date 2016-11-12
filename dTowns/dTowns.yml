@@ -1181,6 +1181,9 @@ towns_event_handler:
       - define location <player.location.cursor_on>
       - inject locally path:check_blockchange
       }
+    on entity destroys vehicle in notable cuboid:
+    - define location <context.vehicle.location>
+    - inject locally path:check_blockchange
     on player empties bucket in notable cuboid:
     - inject locally path:check_blockchange
     on player right clicks entity in notable cuboid:
@@ -1231,7 +1234,7 @@ towns_event_handler:
   - if <proc[towns_get_town].context[<player||null>]||null> == <def[player_town]> && <def[checkfor]||null> != pvp {
     - goto finish
     }
-  - if <player.has_flag[saved_inventory]> && <proc[towns_get_members].context[<def[town]>].size> == 0 {
+  - if <player.has_flag[saved_inventory]||false> && <proc[towns_get_members].context[<def[town]>].size> == 0 {
     - goto finish
     }
   - if <def[checkfor].exists> {
