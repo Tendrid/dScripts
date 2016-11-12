@@ -1231,7 +1231,6 @@ towns_event_handler:
   - if <proc[towns_get_town].context[<player||null>]||null> == <def[player_town]> && <def[checkfor]||null> != pvp {
     - goto finish
     }
-  - narrate "<player.has_flag[saved_inventory]> <proc[towns_get_members].context[<def[town]>].size>"
   - if <player.has_flag[saved_inventory]> && <proc[towns_get_members].context[<def[town]>].size> == 0 {
     - goto finish
     }
