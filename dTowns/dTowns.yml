@@ -35,6 +35,8 @@ towns_defaults:
       chunks_per_player: 8
       outposts_per_player: 1
   town:
+    permissions:
+      create: true
     rule:
       pistons: true
       pvp: true
@@ -243,6 +245,8 @@ towns_command_handler:
         - inject locally path:outline
       - case teleport:
         - inject locally path:teleport
+      - case tp:
+        - inject locally path:teleport
       - case center:
         - inject locally path:center
       - default:
@@ -253,7 +257,7 @@ towns_command_handler:
     - narrate "%c% info (player)<&0>-<&7> <parse:<proc[towns_get_translation].context[command-info-info]>>" format:towns_format1
     - narrate "%c% list<&0>-<&7> <parse:<proc[towns_get_translation].context[command-list-info]>>" format:towns_format1
     - narrate "%c% create (name) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-create-info]>>" format:towns_format1
-    - narrate "%c% teleport <&0>-<&7> <parse:<proc[towns_get_translation].context[command-teleport-info]>>" format:towns_format1
+    - narrate "%c% teleport/tp <&0>-<&7> <parse:<proc[towns_get_translation].context[command-teleport-info]>>" format:towns_format1
     - narrate "%c% setspawn (town/outpost) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-setspawn-info]>>" format:towns_format1
     - narrate "%c% center <&0>-<&7> <parse:<proc[towns_get_translation].context[command-center-info]>>" format:towns_format1
     - narrate "%c% teleport <&0>-<&7> <parse:<proc[towns_get_translation].context[command-teleport-info]>>" format:towns_format1
@@ -280,7 +284,7 @@ towns_command_handler:
       - narrate "<&c><parse:<proc[towns_get_translation].context[already-in-town]>>" format:towns_format1
       - queue clear
       }
-    - if <player.has_permission[towns.town.create].not||true> {
+    - if <proc[towns_get_setting].context[town.permissions.create].not> || <player.has_permission[towns.town.create].not||true> {
       - narrate "<&c><parse:<proc[towns_get_translation].context[not-allowed-create]>>" format:towns_format1
       - queue clear
       }
@@ -1141,12 +1145,39 @@ towns_event_handler:
   type: world
   debug: false
   events:
-    on player breaks block in notable cuboid:
-    - inject locally path:check_blockchange
-    on player places block in notable cuboid:
-    - inject locally path:check_blockchange
+    on player breaks block:
+    - if <context.location.cuboids.is_empty.not> {
+      - inject locally path:check_blockchange
+      } else {
+      - if <player.has_permission[towns.override.build]||false> goto finish
+      - if <player.has_flag[towns.wilderness_edit_ban]> {
+        - determine cancelled
+        } else {
+        - narrate "You can only alter blocks once every <proc[towns_get_setting].context[towns.world_edit_freq]> seconds outside of your town"
+        - flag <player> towns.wilderness_edit_ban:true
+        - wait <proc[towns_get_setting].context[towns.world_edit_freq]>s
+        - flag <player> towns.wilderness_edit_ban:!
+        }
+      - mark finish
+      }
+    on player places block:
+    - if <context.location.cuboids.is_empty.not> {
+      - inject locally path:check_blockchange
+      } else {
+      - if <player.has_permission[towns.override.build]||false> goto finish
+      - if <player.has_flag[towns.wilderness_edit_ban]> {
+        - determine cancelled
+        } else {
+        - narrate "You can only alter blocks once every <proc[towns_get_setting].context[towns.world_edit_freq]> seconds outside of your town"
+        - flag <player> towns.wilderness_edit_ban:true
+        - wait <proc[towns_get_setting].context[towns.world_edit_freq]>s
+        - flag <player> towns.wilderness_edit_ban:!
+        }
+      - mark finish
+      }
     on player opens inventory:
-    - if <player.location.cursor_on.cuboids.is_empty.not> {
+    - define allowed_inventories <li@ENCHANTING|WORKBENCH|PLAYER>
+    - if <player.location.cursor_on.cuboids.is_empty.not> && <def[allowed_inventories].find[<context.inventory.inventory_type>]> == -1 {
       - define location <player.location.cursor_on>
       - inject locally path:check_blockchange
       }
@@ -1198,6 +1229,10 @@ towns_event_handler:
     - define player_town <def[town]>
     }
   - if <proc[towns_get_town].context[<player||null>]||null> == <def[player_town]> && <def[checkfor]||null> != pvp {
+    - goto finish
+    }
+  - narrate "<player.has_flag[saved_inventory]> <proc[towns_get_members].context[<def[town]>].size>"
+  - if <player.has_flag[saved_inventory]> && <proc[towns_get_members].context[<def[town]>].size> == 0 {
     - goto finish
     }
   - if <def[checkfor].exists> {
@@ -1565,7 +1600,7 @@ towns_get_welcome:
   script:
   - if <def[town]||null> == null determine <proc[towns_get_setting].context[wilderness.welcome].unescaped>
   - inject s@towns_checkload_town
-  - determine <yaml[towns_town_<def[town]>].read[town.welcome].unescaped||li@>
+  - determine <yaml[towns_town_<def[town]>].read[town.welcome].unescaped||>
 towns_get_rank:
   type: procedure
   debug: false
