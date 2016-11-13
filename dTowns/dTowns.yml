@@ -40,6 +40,7 @@ towns_defaults:
     rule:
       pistons: true
       pvp: true
+      pve: true
       titlescreen: true
       firespread: false
       mobspawn: false
@@ -49,6 +50,7 @@ towns_defaults:
     rule:
       pistons: true
       pvp: true
+      pve: true
       titlescreen: true
       firespread: true
       mobspawn: true
@@ -1176,7 +1178,7 @@ towns_event_handler:
       - mark finish
       }
     on player opens inventory:
-    - define allowed_inventories <li@ENCHANTING|WORKBENCH|PLAYER>
+    - define allowed_inventories <li@ENCHANTING|WORKBENCH|PLAYER|ENDER_CHEST>
     - if <player.location.cursor_on.cuboids.is_empty.not> && <def[allowed_inventories].find[<context.inventory.inventory_type>]> == -1 {
       - define location <player.location.cursor_on>
       - inject locally path:check_blockchange
@@ -1192,6 +1194,7 @@ towns_event_handler:
     on player damages entity in notable cuboid:
     - if <context.entity.entity_type> == player queue clear
     - define location <context.entity.location>
+    - define checkfor pve
     - inject locally path:check_blockchange
     on player damages player in notable cuboid:
     - define location <context.entity.location>
