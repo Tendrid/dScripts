@@ -1155,6 +1155,7 @@ towns_event_handler:
       - if <player.has_flag[towns.wilderness_edit_ban]> {
         - determine cancelled
         } else {
+        - if <server.has_flag[openbuild]> goto finish
         - narrate "You can only alter blocks once every <proc[towns_get_setting].context[towns.world_edit_freq]> seconds outside of your town"
         - flag <player> towns.wilderness_edit_ban:true
         - wait <proc[towns_get_setting].context[towns.world_edit_freq]>s
@@ -1170,6 +1171,7 @@ towns_event_handler:
       - if <player.has_flag[towns.wilderness_edit_ban]> {
         - determine cancelled
         } else {
+        - if <server.has_flag[openbuild]> goto finish
         - narrate "You can only alter blocks once every <proc[towns_get_setting].context[towns.world_edit_freq]> seconds outside of your town"
         - flag <player> towns.wilderness_edit_ban:true
         - wait <proc[towns_get_setting].context[towns.world_edit_freq]>s
