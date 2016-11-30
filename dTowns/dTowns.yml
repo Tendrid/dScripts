@@ -9,12 +9,12 @@ towns_version:
   id: 110
   description: dTowns
   version: 8
-towns_script_tracker:
-  type: world
-  debug: false
-  events:
-    on system time hourly:
-    - webget "http://stats.denizenscript.com/tracker?script=110&version=<s@towns_version.yaml_key[version]>&players=<server.list_online_players.size>&towns=<yaml[towns_lookup_table].list_keys[towns].size||0>"
+#towns_script_tracker:
+#  type: world
+#  debug: false
+#  events:
+#    on system time hourly:
+#    - webget "http://stats.denizenscript.com/tracker?script=110&version=<s@towns_version.yaml_key[version]>&players=<server.list_online_players.size>&towns=<yaml[towns_lookup_table].list_keys[towns].size||0>"
 ########################
 #
 # Default Values
@@ -286,7 +286,7 @@ towns_command_handler:
       - narrate "<&c><parse:<proc[towns_get_translation].context[already-in-town]>>" format:towns_format1
       - queue clear
       }
-    - if <proc[towns_get_setting].context[town.permissions.create].not> || <player.has_permission[towns.town.create].not||true> {
+    - if <proc[towns_get_setting].context[town.permissions.create].not> {
       - narrate "<&c><parse:<proc[towns_get_translation].context[not-allowed-create]>>" format:towns_format1
       - queue clear
       }
@@ -1870,6 +1870,16 @@ towns_format1:
 # town item claim rewards
 #
 ######################
+town_npc_token:
+  type: item
+  material: i@paper
+  display name: NPC Contract
+  enchantments: 
+  - durability:1
+  lore:
+  - contract of a guy
+  - right click to set marker
+  - left click to place
 town_chunk_claim_token:
   type: item
   material: i@gold_record[flags=li@hide_enchants]
@@ -1888,6 +1898,127 @@ town_outpost_claim_token:
   lore:
   - <&7>A town outpost token.
   - <&7>Used to gain bonus outposts for a town.
+
+
+town_npc_token_events:
+  type: world
+  events:
+    on player right clicks with town_npc_token:
+    #- schematic load name:NPCBLAN
+    #- schematic rotate name:FORGEMASTER angle:90
+    #- schematic paste name:NPCBLANK <player.location.cursor_on>
+    #- schematic unload name:NPCBLANK
+    #- showfake LAVA <player.location.cursor_on.add[1,0,1]> players:<server.list_online_players> duration:5s
+    #- showfake GOLD_BLOCK <proc[town_npc_get_placement_origin]> players:<player> duration:10s
+    #- showfake GOLD_BLOCK <player.location.cursor_on> players:<player> duration:10s 
+
+    # r click: show place marker
+    - if <context.location.cuboids.is_empty.not> {
+      - define location <player.location.cursor_on>
+      - inject locally path:check_blockchange
+      - run town_npc_place_marker
+      } else {
+      - narrate "You can only place NPCs in your town"
+      }
+    - determine cancelled
+
+
+
+    on player left clicks with town_npc_token:
+    - ~run town_npc_place def:FORGEMASTER
+
+    
+
+
+
+town_npc_get_placement_center:
+  type: procedure
+  script:
+  - choose <player.location.yaw.simple>:
+    - case North:
+      - determine <player.location.cursor_on.add[0,0,-1]>
+    - case South:
+      - determine <player.location.cursor_on.add[0,0,1]>
+    - case East:
+      - determine <player.location.cursor_on.add[1,0,0]>
+    - case West:
+      - determine <player.location.cursor_on.add[-1,0,0]>
+
+town_npc_place:
+  type: task
+  debug: false
+  speed: 0
+  definitions: schema
+  script:
+  # check if location and rotation flags exist
+  - if <player.has_flag[towns_npc_schame_origin].not> {
+    - narrate "Right click with item to set location"
+    - determine cancelled
+    }
+  - if <player.has_flag[towns_npc_schame_rotation].not> {
+    - narrate "Right click with item to set location"
+    - determine cancelled
+    }
+  - schematic load name:<def[schema]>
+  - schematic rotate name:<def[schema]> angle:<player.flag[towns_npc_schame_rotation]>
+  - schematic paste name:<def[schema]> <player.flag[towns_npc_schame_origin]>
+  #- narrate <schematic[<def[schema]>].cuboid[<player.location>]>
+  - region add "<schematic[<def[schema]>].cuboid[<player.flag[towns_npc_schame_origin]>]>" "id:<player.name>_<def[schema]>"
+  - narrate "are we still here?"
+  # create worldguard region
+  # create npc
+  # flag npc with wg region
+  - schematic unload name:<def[schema]>
+  - inject town_npc_clear_schema_location
+  - take i@town_npc_token
+  - determine cancelled
+
+town_npc_place_marker:
+  type: task
+  debug: false
+  speed: 0
+  script:
+  - if <player.location.cursor_on.y> < 10 || <player.location.cursor_on.y> > 200 {
+    - narrate "NPCs must be placed higher than 10, and lower than 200"
+    - queue clear
+    }
+
+  - define center <proc[town_npc_get_placement_center]>
+  - define cube cu@<def[center].add[1,0,1]>|<def[center].add[-1,0,-1]>
+  - foreach <def[cube].blocks>:
+    - showfake GLOWSTONE <def[value]> players:<player> duration:10s
+  - showfake REDSTONE_BLOCK <def[center]> players:<player> duration:10s
+  - narrate "Left click with contract within 10 seconds to place NPC on target"
+  - run town_npc_set_schema_location def:<player.location.cursor_on>
+
+town_npc_clear_schema_location:
+  type: task
+  debug: false
+  speed: 0
+  script:
+  - flag player towns_npc_schame_rotation:!
+  - flag player towns_npc_schame_origin:!
+
+town_npc_set_schema_location:
+  type: task
+  debug: false
+  speed: 0
+  definitions: loc
+  script:
+  - choose <player.location.yaw.simple>:
+    - case South:
+      - flag player towns_npc_schame_origin:<def[loc].add[-1,0,0]> duration:10s
+      - flag player towns_npc_schame_rotation:0 duration:10s
+    - case East:
+      - flag player towns_npc_schame_origin:<def[loc].add[0,0,-1]> duration:10s
+      - flag player towns_npc_schame_rotation:90 duration:10s
+    - case West:
+      - flag player towns_npc_schame_origin:<def[loc].add[-2,0,-1]> duration:10s
+      - flag player towns_npc_schame_rotation:270 duration:10s
+    - case North:
+      - flag player towns_npc_schame_origin:<def[loc].add[-1,0,-2]> duration:10s
+      - flag player towns_npc_schame_rotation:180 duration:10s
+
 town_chunk_claim_token_events:
   type: world
   debug: false
