@@ -1834,6 +1834,7 @@ towns_teleport_menu:
   - define town <player.flag[towns.town_inv]||<proc[towns_get_town]>>
   - define items li@
   - define spawnpoint <proc[towns_get_spawnpoint].context[<def[town]>]>
+  - define items "<def[items].include[i@ender_pearl[display_name=<&6>Mage Tower;nbt=li@location/<w@Kingdoms.spawn_location>]]>"
   - if <def[spawnpoint]> != null {
     - define items "<def[items].include[i@nether_star[display_name=<&6>Town Spawnpoint;nbt=li@location/<def[spawnpoint]>]]>"
     }
