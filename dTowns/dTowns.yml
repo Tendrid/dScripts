@@ -178,7 +178,7 @@ towns_fix_cuboids:
     - define town <def[value]>
     - foreach <proc[towns_get_chunks].context[<def[town]>]>:
       - define chunk <proc[towns_format_chunk_to_normal].context[<def[value]>]>
-      - define chunkname <def[chunk]>
+      - define chunkname <proc[towns_format_chunk_to_save].context[<def[chunk]>]>
       - note <def[chunk].cuboid> as:towns/<def[town]>/<def[chunkname]>
 towns_get_setting:
   type: procedure
@@ -1328,6 +1328,81 @@ towns_event_handler:
     - define alert_player false
     - define checkfor firespread
     - inject locally path:check_blockchange
+
+    # BOWMASTER, BREWMASTER, FORGEMASTER, SCRIBEMASTER, TOWNCRYER
+    on player right clicks with town_npc_token_BOWMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - inject locally path:place_npc
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+    on player left clicks with town_npc_token_BOWMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - ~run town_npc_place def:BOWMASTER
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+
+    on player right clicks with town_npc_token_BREWMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - inject locally path:place_npc
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+    on player left clicks with town_npc_token_BREWMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - ~run town_npc_place def:BREWMASTER
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+
+    on player right clicks with town_npc_token_FORGEMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - inject locally path:place_npc
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+    on player left clicks with town_npc_token_FORGEMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - ~run town_npc_place def:FORGEMASTER
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+
+    on player right clicks with town_npc_token_SCRIBEMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - inject locally path:place_npc
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+    on player left clicks with town_npc_token_SCRIBEMASTER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - ~run town_npc_place def:SCRIBEMASTER
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+
+    on player right clicks with town_npc_token_TOWNCRYER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - inject locally path:place_npc
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+    on player left clicks with town_npc_token_TOWNCRYER:
+    - if <player.location.world> == <w@Kingdoms> {
+      - ~run town_npc_place def:TOWNCRYER
+      } else {
+      - narrate "You can only place NPCs in the Kingdoms world"  
+      }
+
+
+  place_npc:
+  - define blockroad true
+  - define location <player.location.cursor_on>
+  - inject locally path:check_blockchange
+  - run town_npc_place_marker
+  - determine cancelled
+
   check_blockchange:
   - if <def[location].exists.not> define location <context.location>
   - if <player.has_permission[towns.override.build]||false> goto finish
@@ -1343,7 +1418,10 @@ towns_event_handler:
     - goto finish
     }
   - if <def[roads].contains[<proc[towns_get_town].context[<def[player]>]>]> {
-    - goto finish
+    - define roadowner true
+    - if <def[blockroad].exists.not> {
+      - goto finish
+      }
     }
   - if <player.has_flag[saved_inventory]||false> && <proc[towns_get_members].context[<def[town]>].size> == 0 {
     - goto finish
@@ -1352,7 +1430,11 @@ towns_event_handler:
     - if <proc[towns_get_rule].context[<def[town]>|<def[checkfor]>]||false> goto finish
     }
   - if !<def[roads].is_empty> {
-    - narrate "<&c>You are not allowed to do this on a road you do not own" format:towns_format1
+    - if <def[roadowner].exists> {
+      - narrate "<&c>You are not allowed to do this on a road" format:towns_format1
+      } else {
+      - narrate "<&c>You are not allowed to do this on a road you do not own" format:towns_format1
+      }
     } else if <def[alert_player]||true> {
     - narrate "<&c>You are not allowed to do this in the town of <proc[towns_get_name].context[<def[town]>]>" format:towns_format1
     #- playeffect <player.location.add[<player.eye_location.direction.vector.mul[2]>]> effect:barrier qty:5 offset:0.5 visibility:50 targets:<player>
@@ -1946,6 +2028,9 @@ towns_chunk_is_essential:
   debug: false
   definitions: chunk
   script:
+  # TODO: check if cuboid has NPC region
+  # if it does, display plot contains npc error
+  #<cu@cuboid.regions>
   - if <def[chunk]||null> == null determine null
   - define town <proc[towns_get_town_from_chunk].context[<def[chunk]>]>
   - if <def[town]> == null determine false
@@ -2019,16 +2104,58 @@ towns_format1:
 # town item claim rewards
 #
 ######################
-town_npc_token:
+# BOWMASTER, BREWMASTER, FORGEMASTER, SCRIBEMASTER, TOWNCRYER
+town_npc_token_BOWMASTER:
   type: item
   material: i@paper
-  display name: NPC Contract
+  display name: BowMaster Contract
   enchantments: 
   - durability:1
+  bound: true
   lore:
-  - contract of a guy
   - right click to set marker
   - left click to place
+town_npc_token_BREWMASTER:
+  type: item
+  material: i@paper
+  display name: BrewMaster Contract
+  enchantments: 
+  - durability:1
+  bound: true
+  lore:
+  - right click to set marker
+  - left click to place
+town_npc_token_FORGEMASTER:
+  type: item
+  material: i@paper
+  display name: ForgeMaster Contract
+  enchantments: 
+  - durability:1
+  bound: true
+  lore:
+  - right click to set marker
+  - left click to place
+town_npc_token_SCRIBEMASTER:
+  type: item
+  material: i@paper
+  display name: ScribeMaster Contract
+  enchantments: 
+  - durability:1
+  bound: true
+  lore:
+  - right click to set marker
+  - left click to place
+town_npc_token_TOWNCRYER:
+  type: item
+  material: i@paper
+  display name: TownCryer Contract
+  enchantments: 
+  - durability:1
+  bound: true
+  lore:
+  - right click to set marker
+  - left click to place
+
 town_chunk_claim_token:
   type: item
   material: i@gold_record[flags=li@hide_enchants]
@@ -2057,49 +2184,46 @@ town_road_claim_token:
   - <&7>A town road token.
   - <&7>Used to gain bonus roads for a town.
 
-town_npc_token_events:
-  type: world
-  events:
-    on player right clicks with town_npc_token:
-    #- schematic load name:NPCBLAN
-    #- schematic rotate name:FORGEMASTER angle:90
-    #- schematic paste name:NPCBLANK <player.location.cursor_on>
-    #- schematic unload name:NPCBLANK
-    #- showfake LAVA <player.location.cursor_on.add[1,0,1]> players:<server.list_online_players> duration:5s
-    #- showfake GOLD_BLOCK <proc[town_npc_get_placement_origin]> players:<player> duration:10s
-    #- showfake GOLD_BLOCK <player.location.cursor_on> players:<player> duration:10s 
-
-    # r click: show place marker
-    - if <context.location.cuboids.is_empty.not> {
-      - define location <player.location.cursor_on>
-      - inject locally path:check_blockchange
-      - run town_npc_place_marker
-      } else {
-      - narrate "You can only place NPCs in your town"
-      }
-    - determine cancelled
-
-
-
-    on player left clicks with town_npc_token:
-    - ~run town_npc_place def:FORGEMASTER
-
-    
-
-
 
 town_npc_get_placement_center:
   type: procedure
+  definitions: loc
   script:
   - choose <player.location.yaw.simple>:
     - case North:
-      - determine <player.location.cursor_on.add[0,0,-1]>
+      - determine <def[loc].add[0,0,-1]>
     - case South:
-      - determine <player.location.cursor_on.add[0,0,1]>
+      - determine <def[loc].add[0,0,1]>
     - case East:
-      - determine <player.location.cursor_on.add[1,0,0]>
+      - determine <def[loc].add[1,0,0]>
     - case West:
-      - determine <player.location.cursor_on.add[-1,0,0]>
+      - determine <def[loc].add[-1,0,0]>
+
+town_npc_get_placement_cuboid:
+  type: procedure
+  definitions: loc
+  script:
+  - determine cu@<def[loc]>|<def[loc].add[2,3,2]>
+
+town_npc_set_schema_location:
+  type: task
+  debug: false
+  speed: 0
+  definitions: loc
+  script:
+  - choose <player.location.yaw.simple>:
+    - case South:
+      - flag player towns_npc_schame_origin:<def[loc].add[-1,0,0]> duration:10s
+      - flag player towns_npc_schame_rotation:180 duration:10s
+    - case East:
+      - flag player towns_npc_schame_origin:<def[loc].add[0,0,-1]> duration:10s
+      - flag player towns_npc_schame_rotation:270 duration:10s
+    - case West:
+      - flag player towns_npc_schame_origin:<def[loc].add[-2,0,-1]> duration:10s
+      - flag player towns_npc_schame_rotation:90 duration:10s
+    - case North:
+      - flag player towns_npc_schame_origin:<def[loc].add[-1,0,-2]> duration:10s
+      - flag player towns_npc_schame_rotation:0 duration:10s
 
 town_npc_place:
   type: task
@@ -2108,26 +2232,29 @@ town_npc_place:
   definitions: schema
   script:
   # check if location and rotation flags exist
-  - if <player.has_flag[towns_npc_schame_origin].not> {
+  - if <player.has_flag[towns_npc_schame_origin].not> || <player.has_flag[towns_npc_schame_rotation].not> {
     - narrate "Right click with item to set location"
     - determine cancelled
     }
-  - if <player.has_flag[towns_npc_schame_rotation].not> {
-    - narrate "Right click with item to set location"
-    - determine cancelled
+
+  - define testregion region@<player.name>_<def[schema]>,Kingdoms
+  - if <def[testregion].id> != null  {
+    - narrate "You already own this NPC, (location: <def[testregion].cuboid.center.simple>)"
+    } else {
+    - schematic load name:<def[schema]>
+    - schematic rotate name:<def[schema]> angle:<player.flag[towns_npc_schame_rotation]>
+    - schematic paste name:<def[schema]> <player.flag[towns_npc_schame_origin]>
+    #- narrate <schematic[<def[schema]>].cuboid[<player.location>]>
+    - region add <proc[town_npc_get_placement_cuboid].context[<player.flag[towns_npc_schame_origin]>]> id:<player.name>_<def[schema]>
+    #- showfake m@stone <proc[town_npc_get_placement_cuboid].context[<player.flag[towns_npc_schame_origin]>].outline> players:<player> d:10s
+    # create worldguard region
+    # create npc
+    # flag npc with wg region
+    - schematic unload name:<def[schema]>
+    - inject town_npc_clear_schema_location
+    - take i@town_npc_token_<def[schema]>
+  
     }
-  - schematic load name:<def[schema]>
-  - schematic rotate name:<def[schema]> angle:<player.flag[towns_npc_schame_rotation]>
-  - schematic paste name:<def[schema]> <player.flag[towns_npc_schame_origin]>
-  #- narrate <schematic[<def[schema]>].cuboid[<player.location>]>
-  - region add "<schematic[<def[schema]>].cuboid[<player.flag[towns_npc_schame_origin]>]>" "id:<player.name>_<def[schema]>"
-  - narrate "are we still here?"
-  # create worldguard region
-  # create npc
-  # flag npc with wg region
-  - schematic unload name:<def[schema]>
-  - inject town_npc_clear_schema_location
-  - take i@town_npc_token
   - determine cancelled
 
 town_npc_place_marker:
@@ -2140,7 +2267,7 @@ town_npc_place_marker:
     - queue clear
     }
 
-  - define center <proc[town_npc_get_placement_center]>
+  - define center <proc[town_npc_get_placement_center].context[<player.location.cursor_on>]>
   - define cube cu@<def[center].add[1,0,1]>|<def[center].add[-1,0,-1]>
   - foreach <def[cube].blocks>:
     - showfake GLOWSTONE <def[value]> players:<player> duration:10s
@@ -2156,25 +2283,6 @@ town_npc_clear_schema_location:
   - flag player towns_npc_schame_rotation:!
   - flag player towns_npc_schame_origin:!
 
-town_npc_set_schema_location:
-  type: task
-  debug: false
-  speed: 0
-  definitions: loc
-  script:
-  - choose <player.location.yaw.simple>:
-    - case South:
-      - flag player towns_npc_schame_origin:<def[loc].add[-1,0,0]> duration:10s
-      - flag player towns_npc_schame_rotation:0 duration:10s
-    - case East:
-      - flag player towns_npc_schame_origin:<def[loc].add[0,0,-1]> duration:10s
-      - flag player towns_npc_schame_rotation:90 duration:10s
-    - case West:
-      - flag player towns_npc_schame_origin:<def[loc].add[-2,0,-1]> duration:10s
-      - flag player towns_npc_schame_rotation:270 duration:10s
-    - case North:
-      - flag player towns_npc_schame_origin:<def[loc].add[-1,0,-2]> duration:10s
-      - flag player towns_npc_schame_rotation:180 duration:10s
 
 town_chunk_claim_token_events:
   type: world
