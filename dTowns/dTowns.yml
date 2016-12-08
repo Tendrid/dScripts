@@ -2058,7 +2058,7 @@ towns_chunk_is_essential:
 ######################
 towns_teleport_menu:
   type: inventory
-  inventory: chest
+  inventory: ender_chest
   title: <&6>Town Teleport Menu
   size: 54
   procedural items:
