@@ -276,7 +276,7 @@ towns_command_handler:
     - narrate "%c% setspawn (town/outpost) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-setspawn-info]>>" format:towns_format1
     - narrate "%c% center <&0>-<&7> <parse:<proc[towns_get_translation].context[command-center-info]>>" format:towns_format1
     - narrate "%c% teleport <&0>-<&7> <parse:<proc[towns_get_translation].context[command-teleport-info]>>" format:towns_format1
-    - narrate "%c% grant (player) (pvp/pve/inventory) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-grant-info]>>" format:towns_format1    
+    - narrate "%c% grant (player) (pvp/pve/chests) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-grant-info]>>" format:towns_format1    
     - narrate "%c% invite (player) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-invite-info]>>" format:towns_format1
     - narrate "%c% accept <&0>-<&7> <parse:<proc[towns_get_translation].context[command-accept-info]>>" format:towns_format1
     - narrate "%c% leave <&0>-<&7> <parse:<proc[towns_get_translation].context[command-leave-info]>>" format:towns_format1
