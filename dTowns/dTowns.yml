@@ -46,6 +46,7 @@ towns_defaults:
       titlescreen: true
       firespread: false
       mobspawn: false
+      chests: false
   wilderness:
     name: Wilderness
     welcome: It&sqs dangerous to go alone
@@ -56,6 +57,7 @@ towns_defaults:
       titlescreen: true
       firespread: true
       mobspawn: true
+      chests: true
 ########################
 #
 # File handler
@@ -112,6 +114,9 @@ towns_reload_config:
     - yaml id:towns_config set wilderness.rule.titlescreen:<proc[towns_get_setting].context[wilderness.rule.titlescreen]>
     - yaml id:towns_config set wilderness.rule.firespread:<proc[towns_get_setting].context[wilderness.rule.firespread]>
     - yaml id:towns_config set wilderness.rule.mobspawn:<proc[towns_get_setting].context[wilderness.rule.mobspawn]>
+    - yaml id:towns_config set wilderness.rule.inventory:<proc[towns_get_setting].context[wilderness.rule.inventory]>
+
+
 
     - yaml savefile:/towns/config/config.yml id:towns_config
     }
@@ -213,6 +218,8 @@ towns_command_handler:
         - inject locally path:create
       - case disband:
         - inject locally path:disband
+      - case grant:
+        - inject locally path:grant
       - case invite:
         - inject locally path:invite
       - case accept:
@@ -269,6 +276,7 @@ towns_command_handler:
     - narrate "%c% setspawn (town/outpost) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-setspawn-info]>>" format:towns_format1
     - narrate "%c% center <&0>-<&7> <parse:<proc[towns_get_translation].context[command-center-info]>>" format:towns_format1
     - narrate "%c% teleport <&0>-<&7> <parse:<proc[towns_get_translation].context[command-teleport-info]>>" format:towns_format1
+    - narrate "%c% grant (player) (pvp/pve/inventory) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-grant-info]>>" format:towns_format1    
     - narrate "%c% invite (player) <&0>-<&7> <parse:<proc[towns_get_translation].context[command-invite-info]>>" format:towns_format1
     - narrate "%c% accept <&0>-<&7> <parse:<proc[towns_get_translation].context[command-accept-info]>>" format:towns_format1
     - narrate "%c% leave <&0>-<&7> <parse:<proc[towns_get_translation].context[command-leave-info]>>" format:towns_format1
@@ -322,6 +330,34 @@ towns_command_handler:
       - queue clear
       }
     - run towns_disband_town def:<def[town]>
+  grant:
+    - define town <proc[towns_get_town]>
+    - if <def[town]> == null {
+      - narrate "<&c><parse:<proc[towns_get_translation].context[not-in-town]>>" format:towns_format1
+      - queue clear
+      }
+    - if li@owner|assistant !contains <proc[towns_get_rank]> {
+      - narrate "<&c><parse:<proc[towns_get_translation].context[insufficient-rank]>>" format:towns_format1
+      - queue clear
+      }
+    - define target <server.match_player[<context.args.get[2]||null>]||null>
+    - define rule <context.args.get[3]||null>
+    - if <def[target]> == null {
+      - narrate "<&c><parse:<proc[towns_get_translation].context[invalid-player-specified]>>" format:towns_format1
+      - queue clear
+      }
+    - define rulelist li@PVE|PVP|Chests
+    - if <def[rulelist]> !contains <def[rule]> {
+      - define rulelist <def[rulelist].formatted>
+      - narrate "<&c><parse:<proc[towns_get_translation].context[invalid-rule]>>" format:towns_format1
+      - queue clear
+      }
+    - define state <proc[towns_get_grant].context[<def[town]>|<def[rule]>|<def[target]>]||false>
+    - if <proc[towns_get_grant].context[<def[town]>|<def[rule]>|<def[target]>]> {
+      - run towns_set_grant def:<def[town]>|<def[rule]>|false|<def[target]>
+      } else {
+      - run towns_set_grant def:<def[town]>|<def[rule]>|true|<def[target]>
+      }
   invite:
     - define town <proc[towns_get_town]>
     - if <def[town]> == null {
@@ -649,7 +685,7 @@ towns_command_handler:
       - queue clear
       }
     - define rule <context.args.get[2]||null>
-    - define rules li@Pistons|PVP|Titlescreen|Firespread|MobSpawn
+    - define rules li@Pistons|PVP|Titlescreen|Firespread|MobSpawn|Chests
     - if <def[rules]> !contains <def[rule]> {
       - define rulelist <def[rules].formatted>
       - narrate "<&c><parse:<proc[towns_get_translation].context[invalid-rule]>>" format:towns_format1
@@ -1099,6 +1135,23 @@ towns_set_rule:
       } else {
       - narrate format:towns_format1 "<parse:<proc[towns_get_translation].context[forced-rule-change]>>" targets:<def[members]>
       }
+towns_set_grant:
+  type: task
+  debug: false
+  speed: 0
+  definitions: town|rule|state|target|player
+  script:
+    - if <def[town]||null> == null queue clear
+    - if <def[rule]||null> == null queue clear
+    - if <def[state]||null> == null queue clear
+    - yaml id:towns_town_<def[town]> set town.grants.<def[rule]>.<def[target]>:<def[state]>
+    - define members <proc[towns_get_members].context[<def[town]>].filter[is_online]>
+    - if <def[player]||null> != null {
+      - define playername <def[player].name>
+      - narrate format:towns_format1 "<parse:<proc[towns_get_translation].context[rule-change]>>" targets:<def[members]>
+      } else {
+      - narrate format:towns_format1 "<parse:<proc[towns_get_translation].context[forced-rule-change]>>" targets:<def[members]>
+      }  
 town_set_wilderness_rule:
   type: task
   debug: false
@@ -1248,6 +1301,38 @@ towns_event_handler:
   type: world
   debug: false
   events:
+    on entity breaks hanging:
+    - if <context.location.cuboids.is_empty.not> {
+      - inject locally path:check_blockchange
+      } else {
+      - if <player.has_permission[towns.override.build]||false> goto finish
+      - if <player.has_flag[towns.wilderness_edit_ban]> {
+        - determine cancelled
+        } else {
+        - if <server.has_flag[openbuild]> goto finish
+        - narrate "You can only alter blocks once every <proc[towns_get_setting].context[towns.world_edit_freq]> seconds outside of your town"
+        - flag <player> towns.wilderness_edit_ban:true
+        - wait <proc[towns_get_setting].context[towns.world_edit_freq]>s
+        - flag <player> towns.wilderness_edit_ban:!
+        }
+      - mark finish
+      }
+    on player places hanging:
+    - if <context.location.cuboids.is_empty.not> {
+      - inject locally path:check_blockchange
+      } else {
+      - if <player.has_permission[towns.override.build]||false> goto finish
+      - if <player.has_flag[towns.wilderness_edit_ban]> {
+        - determine cancelled
+        } else {
+        - if <server.has_flag[openbuild]> goto finish
+        - narrate "You can only alter blocks once every <proc[towns_get_setting].context[towns.world_edit_freq]> seconds outside of your town"
+        - flag <player> towns.wilderness_edit_ban:true
+        - wait <proc[towns_get_setting].context[towns.world_edit_freq]>s
+        - flag <player> towns.wilderness_edit_ban:!
+        }
+      - mark finish
+      }
     on player breaks block:
     - if <context.location.cuboids.is_empty.not> {
       - inject locally path:check_blockchange
@@ -1284,6 +1369,7 @@ towns_event_handler:
     - define allowed_inventories <li@ENCHANTING|WORKBENCH|PLAYER|ENDER_CHEST>
     - if <player.location.cursor_on.cuboids.is_empty.not> && <def[allowed_inventories].find[<context.inventory.inventory_type>]> == -1 {
       - define location <player.location.cursor_on>
+      - define checkfor chests
       - inject locally path:check_blockchange
       }
     on entity destroys vehicle in notable cuboid:
@@ -1428,6 +1514,7 @@ towns_event_handler:
     }
   - if <def[checkfor].exists> {
     - if <proc[towns_get_rule].context[<def[town]>|<def[checkfor]>]||false> goto finish
+    - if <proc[towns_get_grant].context[<def[town]>|<def[checkfor]>|<player>]||false> goto finish
     }
   - if !<def[roads].is_empty> {
     - if <def[roadowner].exists> {
@@ -1510,6 +1597,7 @@ towns_translations:
       command-setspawn-info: Manages spawnpoints in your town.
       command-center-info: Sets the center chunk of your town.
       command-teleport-info: Lets you teleport to various locations.
+      command-grant-info: Toggles a specific player access to a rule in your town.
       command-invite-info: Invites a player to your town.
       command-accept-info: Accepts your pending invitation.
       command-leave-info: Removes you from your current town.
@@ -1604,6 +1692,7 @@ towns_translations:
       command-setspawn-info: Administra puntos de aparici<&chr[00F3]>n en tu ciudad.
       command-center-info: Fija el chunk central de tu ciudad.
       command-teleport-info: Te permite teletransportarte a varios lugares.
+      command-grant-info: Toggles a specific player access to a rule in your town.
       command-invite-info: Invita a un jugador a tu ciudad.
       command-accept-info: Acepta tu invitaci<&chr[00F3]>n pendiente.
       command-leave-info: Te elimina de tu ciudad actual.
@@ -1698,6 +1787,7 @@ towns_translations:
       command-setspawn-info: G<&chr[00E8]>re les points de spawn dans votre ville.
       command-center-info: Fixe le chunk central de votre ville.
       command-teleport-info: Vous permet de vous t<&chr[00E9]>l<&chr[00E9]>porter <&chr[00E0]> divers endroits.
+      command-grant-info: Toggles a specific player access to a rule in your town.
       command-invite-info: Invite un joueur <&chr[00E0]> votre ville.
       command-accept-info: Accepte votre invitation en attente.
       command-leave-info: Vous retire de votre ville actuelle.
@@ -1964,6 +2054,18 @@ towns_get_rule:
     }
   - inject s@towns_checkload_town
   - determine <yaml[towns_town_<def[town]>].read[town.rule.<def[rule]>]||<proc[towns_get_setting].context[town.rule.<def[rule]>]>>
+towns_get_grant:
+  type: procedure
+  debug: false
+  definitions: town|rule|player
+  script:
+  - if <def[rule]||null> == null determine null
+  - if <def[player]||null> == null determine null
+  - if <def[town]||null> == null {
+    - determine <proc[towns_get_wilderness_rule].context[<def[rule]>]>
+    }
+  - inject s@towns_checkload_town 
+  - determine <yaml[towns_town_<def[town]>].read[town.grants.<def[rule]>.<def[player]>]||false>
 towns_get_wilderness_rule:
   type: procedure
   debug: false
