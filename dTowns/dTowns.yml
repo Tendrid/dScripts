@@ -41,7 +41,7 @@ towns_defaults:
       create: true
     rule:
       pistons: true
-      pvp: true
+      pvp: false
       pve: true
       titlescreen: true
       firespread: false
