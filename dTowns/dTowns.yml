@@ -1514,7 +1514,9 @@ towns_event_handler:
     }
   - if <def[checkfor].exists> {
     - if <proc[towns_get_rule].context[<def[town]>|<def[checkfor]>]||false> goto finish
-    - if <proc[towns_get_grant].context[<def[town]>|<def[checkfor]>|<player>]||false> goto finish
+    - if <player||false> != false {
+      - if <proc[towns_get_grant].context[<def[town]>|<def[checkfor]>|<player>]||false> goto finish
+      }
     }
   - if !<def[roads].is_empty> {
     - if <def[roadowner].exists> {
