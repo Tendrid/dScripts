@@ -1407,14 +1407,17 @@ towns_event_handler:
       - determine cancelled
       }
     on block burns:
-    - define alert_player false
-    - define checkfor firespread
-    - inject locally path:check_blockchange
+    - if <context.location.world> == <w@Kingdoms> {
+      - define alert_player false
+      - define checkfor firespread
+      - inject locally path:check_blockchange
+      }
     on fire spreads:
-    - define alert_player false
-    - define checkfor firespread
-    - inject locally path:check_blockchange
-
+    - if <context.location.world> == <w@Kingdoms> {
+      - define alert_player false
+      - define checkfor firespread
+      - inject locally path:check_blockchange
+      }
     # BOWMASTER, BREWMASTER, FORGEMASTER, SCRIBEMASTER, TOWNCRYER
     on player right clicks with town_npc_token_BOWMASTER:
     - if <player.location.world> == <w@Kingdoms> {
