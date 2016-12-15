@@ -34,7 +34,7 @@ towns_defaults:
       outpost_claiming_cost: 1000
       road_claiming_cost: 10
       chunks_per_player: 8
-      outposts_per_player: 1
+      outposts_per_player: 0
       roads_per_player: 4
   town:
     permissions:
@@ -74,6 +74,7 @@ towns_file_handler:
     - run towns_update_townlist
     - wait 1t
     - run towns_fix_cuboids
+    - run towns_update_dynmap_all_towns
     on reload scripts:
     - run towns_reload_config
     on player joins:
