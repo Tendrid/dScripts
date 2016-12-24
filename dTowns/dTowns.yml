@@ -774,10 +774,6 @@ towns_command_handler:
           - queue clear
           } else {
           - define town <proc[towns_get_town].context[<def[player]>]>
-          - if <def[town]> == null {
-            - narrate "<&c><parse:<proc[towns_get_translation].context[player-not-in-town]>>" format:towns_format1
-            - queue clear
-            }
           }
         } else {
         - define town <proc[towns_get_town]>
@@ -1366,6 +1362,11 @@ towns_event_handler:
         }
       - mark finish
       }
+    on player right clicks at armor_stand in notable cuboid:
+    - define location <player.location.cursor_on>
+    - define checkfor chests
+    - inject locally path:check_blockchange
+
     on player opens inventory:
     - define allowed_inventories <li@ENCHANTING|WORKBENCH|PLAYER|ENDER_CHEST>
     - if <player.location.cursor_on.cuboids.is_empty.not> && <def[allowed_inventories].find[<context.inventory.inventory_type>]> == -1 {
@@ -1399,14 +1400,15 @@ towns_event_handler:
     on entity spawns in notable cuboid:
     - define allowed_spawn_reasons <li@CURED|BREEDING|SPAWNER_EGG|BUILD_SNOWMAN|BUILD_IRONGOLEM|CUSTOM|DISPENSE_EGG|EGG|ENDER_PEARL|SLIME_SPLIT>
     - if <def[allowed_spawn_reasons].find[<context.reason>]> == -1 {
+      # armor_stand hack
+      - if <context.entity.armor_pose_list||null> != null queue clear
       - define alert_player false
       - define checkfor mobspawn
       - inject locally path:check_blockchange
       }
     on liquid spreads in notable cuboid:
-    - if <context.destination.cuboids.is_empty.not> && <context.location.cuboids.is_empty> {
-      - determine cancelled
-      }
+    - if <context.material> == m@dragon_egg determine cancelled
+    - if <context.destination.cuboids.is_empty.not> && <context.location.cuboids.is_empty> determine cancelled
     on block burns:
     - if <context.location.world> == <w@Kingdoms> {
       - define alert_player false
@@ -1419,6 +1421,14 @@ towns_event_handler:
       - define checkfor firespread
       - inject locally path:check_blockchange
       }
+    on villager damaged by player in notable cuboid:
+    - determine cancelled
+
+    # player no trample crops
+    on player changes block in notable cuboid:
+    # THIS COULD CAUSE PROBLEMS
+    - determine cancelled
+
     # BOWMASTER, BREWMASTER, FORGEMASTER, SCRIBEMASTER, TOWNCRYER
     on player right clicks with town_npc_token_BOWMASTER:
     - if <player.location.world> == <w@Kingdoms> {
@@ -2168,7 +2178,6 @@ towns_teleport_menu:
   type: inventory
   inventory: ender_chest
   title: <&6>Town Teleport Menu
-  size: 54
   procedural items:
   - define town <player.flag[towns.town_inv]||<proc[towns_get_town]>>
   - define items li@
@@ -2194,6 +2203,17 @@ towns_teleport_menu_events:
     - define location <context.item.nbt[location]||null>
     - if <def[location]> == null queue clear
     - inventory close
+    - narrate "<&c>Teleporting in 10 seconds!  Stay still!" format:towns_format1
+    - flag player last_tp_loc:<player.location.simple>
+    - define tp_sec 10
+    - while <def[tp_sec].is[MORE].than[0]> {
+      - if <player.location.simple> != <player.flag[last_tp_loc]> {
+        - narrate "<&c>You must stay still while teleporting!" format:towns_format1
+        - queue clear
+        }
+      - wait 1s
+      - define tp_sec <def[tp_sec].sub[1]>
+      }
     - playsound ENTITY_ENDERMEN_TELEPORT <player.location>
     - playeffect effect:PORTAL data:0.4 qty:500 offset:0.1 <player.location>
     - teleport <def[location].add[0,0.5,0]>
